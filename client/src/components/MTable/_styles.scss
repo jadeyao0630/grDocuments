@@ -1,0 +1,178 @@
+table{
+    border-spacing: 0;
+    position: relative;
+    width:100%;
+    background-color: white;
+    //height:calc( 100% - 60px);
+    tr{
+        //z-index: 2;
+        //position: relative;
+        //pointer-events: none;
+        td,th{
+            //border-bottom: 1px solid #ddd;
+            
+            padding:1rem .5rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px; /* 你可以根据需要调整这个值 */
+            *{
+                vertical-align: middle;
+            }
+        }
+        th{
+            background-color: white;
+        }
+        th:not(last-child){
+            border-right: 1px solid #ddd;
+            padding:.5rem .5rem;
+        }
+        td>div{
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px; /* 你可以根据需要调整这个值 */
+            cursor: pointer; /* 添加鼠标指针样式，表示可点击 */
+        }
+        td:hover {
+            background-color: #e5f5ff; /* 添加悬停效果，增强用户体验 */
+          }
+        // &:last-child{
+        //     td{
+        //         border-bottom:none;
+        //     }
+        // }
+        &:nth-child(even) {
+          background-color: #f2f2f2;
+          td.fixed-pos{
+            background-color: #f2f2f2;
+          }
+        }
+    }
+    thead{
+        position:sticky;
+        top:97px;
+        z-index: 99;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+}
+.fixed-pos{
+  position: sticky;
+  background-color: white;
+  z-index: 98;
+  border-right: 1px solid #ddd;
+}
+.fixed-1st-th{
+  z-index: 100;
+  left:0;
+  
+}
+.fixed-1st{
+  left:0;
+}
+.fixed-2nd{
+  left: 50px;
+  z-index: 97;
+}
+.fixed-last{
+  right:0;
+  border-left: 1px solid #ddd;
+  border-right: none;
+}
+.popupImg {
+    position: fixed;
+    left:0;
+    top:0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 10px;
+    //border-radius: 5px;
+    z-index: 1002;
+    height:100%;
+    width: 100%;
+    .close-button{
+        color:white
+    }
+    img {
+        //max-width: 500px; /* Set the desired maximum width for the popup image */
+        //max-height: 500px; /* Set the desired maximum height for the popup image */
+        position: absolute;
+        //top: 20px; /* Adjust according to your layout */
+        //left: 50%;
+        transform: translate(-50%, 0%);
+        max-height: calc( 100% - 20px);
+        max-width: calc( 100% - 20px);
+        width: auto;
+        height: auto;
+        border-radius: 5px;
+    }
+}
+
+.thumbnail {
+    max-width: 50px; /* Set the desired width for the thumbnail */
+    max-height: 50px; /* Set the desired height for the thumbnail */
+    width: auto;
+    height: auto;
+    cursor: pointer;
+}
+
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+  }
+  
+  /* Modal content */
+  .modal-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+  }
+  .modal-form{
+    text-align: right;
+    display: inline-block;
+    margin-top:20px;
+
+  }
+  /* Close button */
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    &:hover{
+        color:$blue
+    }
+  }
+
+  .pagination {
+    padding-top: 10px;
+    
+    padding-bottom: 10px;
+    position: fixed;
+    bottom:0;
+    background-color: white;
+    box-shadow: 0 -4px 8px rgba(0, 0, 0, 0.2);
+    width:100%;
+    z-index:100;
+  }
+  
+  .pagination button {
+    margin: 0 5px;
+    padding: 5px 10px;
+  }
+  
+  .pagination span {
+    margin: 0 10px;
+  }
