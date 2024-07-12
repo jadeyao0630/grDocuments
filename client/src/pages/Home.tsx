@@ -31,7 +31,7 @@ const Home: React.FC<HomeProps> = ({ showMessage }) => {
   const [data, setData] = useState<DBLoaderContextType>();
   const [optionIndex, setOptionIndex] = useState<string>();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [tableMarginTop, setTableMarginTop] = useState(48);
+  const [tableMarginTop, setTableMarginTop] = useState(98);
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const { DialogComponent, showDialog: showDialogHandler } = useDialog();
 

@@ -22,32 +22,33 @@ const SearchBar: FC<ISearchBarProps> = (props) => {
     const [selectedCate,setSelectedCate] = useState<SingleValue<OptionType> | MultiValue<OptionType>>([]);
     const [selectedLoca,setSelectedLoca] = useState<SingleValue<OptionType> | MultiValue<OptionType>>([]);
     const self = useRef<HTMLDivElement>(null);
-    const delay = 300;
+    const delay = 100;
+    const defaultTop=98
     const isOptionType = (option: any): option is OptionType => {
       return option && typeof option.label === "string" && typeof option.value === "string";
     };
     const _searchChange = (selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>)=>{
         console.log("_searchChange",selectedOptions)
         setSelected(selectedOptions)
-        setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight:48),delay)
+        setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight+defaultTop-50:defaultTop),delay)
     }
     const _projChange = (selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>)=>{
       console.log("_projChange",selectedOptions)
       console.log(self?.current?.clientHeight);
       setSelectedProj(selectedOptions)
-      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight:48),delay)
+      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight+defaultTop-50:defaultTop),delay)
       
     }
     const _cateChange = (selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>)=>{
       console.log("_cateChange",selectedOptions)
       setSelectedCate(selectedOptions)
-      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight:48),delay)
+      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight+defaultTop-50:defaultTop),delay)
       
     }
     const _locaChange = (selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>)=>{
       console.log("_locaChange",selectedOptions)
       setSelectedLoca(selectedOptions)
-      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight:48),delay)
+      setTimeout(()=>onSizeChanged?.(self.current?self.current.clientHeight+defaultTop-50:defaultTop),delay)
       
     }
     

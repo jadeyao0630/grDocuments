@@ -10,6 +10,7 @@ export interface ColumnData {
     isEditble?: boolean; // 假设每行数据中有一个fileName字段
     isFilterable?: boolean;
     isSortable?: boolean;
+    sortType?: string;
     isFixed?:boolean;
     width:string|number;
     type:string;
@@ -28,7 +29,8 @@ export interface ColumnData {
         isFilterable:true,
         isFixed:true,
         canBeExport:true,
-        isSortable:true
+        isSortable:true,
+        sortType:'number'
     },
     createTime:{
         label:'创建日期',
@@ -36,7 +38,8 @@ export interface ColumnData {
         type:'date',
         format:'yyyy/mm/dd',
         canBeExport:true,
-        isSortable:true
+        isSortable:true,
+        sortType:'date'
     },
     project:{
         label:'所属项目',
@@ -48,7 +51,8 @@ export interface ColumnData {
         value:["0"],
         isFilterable:true,
         backupKey:'projectId',
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     category:{
         label:'分类',
@@ -60,7 +64,8 @@ export interface ColumnData {
         value:["0"],
         isFilterable:true,
         backupKey:'categoryId',
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     title:{
         label:'名称',
@@ -69,7 +74,8 @@ export interface ColumnData {
         style:{minWidth:200},
         type:'textarea',
         isFilterable:true,
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     agent:{
         label:'责任者',
@@ -77,7 +83,8 @@ export interface ColumnData {
         width:"auto",
         type:'text',
         isFilterable:true,
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     person:{
         label:'经办人',
@@ -86,7 +93,8 @@ export interface ColumnData {
         style:{maxWidth:120},
         type:'text',
         isFilterable:true,
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     location:{
         label:'位置',
@@ -97,7 +105,8 @@ export interface ColumnData {
         value:["0"],
         isFilterable:true,
         backupKey:'locationId',
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     modifiedTime:{
         label:'更新日期',
@@ -121,7 +130,8 @@ export interface ColumnData {
         data:[],
         value:[],
         isFilterable:true,
-        canBeExport:true
+        canBeExport:true,
+        sortType:"array"
     },
     coverPage:{
         label:'封面页',

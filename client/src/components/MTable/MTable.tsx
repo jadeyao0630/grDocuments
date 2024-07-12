@@ -29,7 +29,7 @@ interface ImageItem {
   
 //const projects=["大兴","北七家","西铁营"]
 //const categories=["运营类","投资结算","营销类","物业中标通知书","审计文件","上市公司文件","股票债券文件","图纸类","招商文件"]
-const docTags=["请款","请示","大兴","北七家","西铁营"]
+//const docTags=["请款","请示","大兴","北七家","西铁营"]
 //const locations=["销售类合同模板","苏州营销","北七家商品房精装修","北七家营销","物业公司运营文件"]
 
 
@@ -60,6 +60,7 @@ const MTable: FC<ImTableProps> = (props) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(15);
     const [goToPage, setGoToPage] = useState(1);
+    const [sortData, setSortData] = useState<Iobject>({type:"down",id:"createTime"});
 
     const { DialogComponent, showDialog: showDialogHandler } = useDialog();
   const handlePreviousPage = () => {
@@ -259,14 +260,49 @@ const MTable: FC<ImTableProps> = (props) => {
     const setTh = (index:number, key:string) => {
         if(tableColumns.hasOwnProperty(key)){
             const columnData:ColumnData=tableColumns[key]
-            var style:React.CSSProperties={...tableColumns[key]['style'],textAlign:"left"}
+            var style:React.CSSProperties={...tableColumns[key]['style'],textAlign:"center"}
             if(columnData.isHide) style={...style, display:'none' }
             if(columnData.width) style={...style, width: columnData.width }
             if(columnData.style) style={...style, ...columnData.style }
             var th_item=columnData.label;
 
-            return <th className={tableColumns[key].isFixed?"fixed-pos fixed-2nd":""} key={index} data-index={index} style={style}>{th_item}</th>
+            return <th className={(tableColumns[key].isFixed?"fixed-pos fixed-2nd":"")+" "+(tableColumns[key].sortType?"sortable-column":"")} 
+                    style={{...style,...{}}}
+                    data-id={key} data-sort={tableColumns[key].sortType} key={index} data-index={index}
+                    onClick={e=>handleSortColumn(e,sortData?.['type']==="up")} >
+                            
+                            {th_item}
+                            {tableColumns[key].sortType && sortData?.['type']==="up" && sortData?.['id'] ===key &&
+                            <Icon icon="angle-up" style={{marginLeft:"2px",pointerEvents: 'none'}}></Icon>
+                            }
+                            {tableColumns[key].sortType && sortData?.['type']==="down" && sortData?.['id'] ===key &&
+                            <Icon icon="angle-down" style={{marginLeft:"2px",pointerEvents: 'none'}}></Icon>}
+
+                    </th>
         }return null
+    }
+    const handleSortColumn = (e:React.MouseEvent<HTMLTableHeaderCellElement>,isUp:boolean) => {
+        console.log((e.target as HTMLTableHeaderCellElement).dataset.sort)
+        const sortKey=(e.target as HTMLTableHeaderCellElement).dataset.id
+        const sortType=(e.target as HTMLTableHeaderCellElement).dataset.sort
+        if(sortKey){
+            const sortedData = [...search].sort((a, b) => {
+                // Ensure the values being compared are numbers, or handle as needed
+                if(sortType==="number")
+                    return isUp?Number(b[sortKey]) - Number(a[sortKey]):Number(a[sortKey]) - Number(b[sortKey]);
+                else if(sortType==="date")
+                    return isUp?new Date(b[sortKey]).getTime() - new Date(a[sortKey]).getTime():new Date(a[sortKey]).getTime() - new Date(b[sortKey]).getTime();
+                else if(sortType==="array")
+                    return isUp?b[sortKey].toString().split(",").length - a[sortKey].toString().split(",").length:a[sortKey].toString().split(",").length - b[sortKey].toString().split(",").length ;
+                else
+                    return isUp?a[sortKey].localeCompare(b[sortKey], 'zh-CN'):b[sortKey].localeCompare(a[sortKey], 'zh-CN')
+
+            });
+            setSortData({type:isUp?"down":"up",id:sortKey})
+            setSearch(sortedData);
+            
+        }
+        
     }
     const headers = Object.keys(tableColumns)
     const handleDoubleClick = (id: number, key:string) => {
@@ -282,17 +318,17 @@ const MTable: FC<ImTableProps> = (props) => {
       };
     const createForm = () => {
         if(currentItem!==undefined){
-            return Object.keys(currentItem).map(key=>{
+            return Object.keys(currentItem).map((key,index)=>{
                 const result_ = findColumnByLabel(tableColumns, key);
                 if(result_!==undefined){
                     return (
-                        <>
+                        <div key={index}>
                             <label>
                                 {tableColumns[key].label}:
                                 {getItem(result_,key,currentItem)}
                             </label>
                             <br />
-                        </>
+                        </div>
                         
                     )
                 }
@@ -498,9 +534,17 @@ const MTable: FC<ImTableProps> = (props) => {
                 <thead>
                     <tr key="header_tr">
                     <th key={"header-index-0"} 
-                                className="fixed-pos fixed-1st-th"
-                                style={{padding:0,minWidth:50}}>
-                                    #
+                                className="fixed-pos fixed-1st-th sortable-column"
+                                data-id="id"
+                                data-sort="number"
+                                style={{padding:0,minWidth:50}} onClick={e=>handleSortColumn(e,sortData?.['type']==="up")} >
+                            
+                            #
+                            {sortData?.['type']==="up" && sortData?.['id'] ==='id' &&
+                            <Icon icon="angle-up" style={{marginLeft:"2px",pointerEvents: 'none'}}></Icon>
+                            }
+                            {sortData?.['type']==="down" && sortData?.['id'] ==='id' &&
+                            <Icon icon="angle-down" style={{marginLeft:"2px",pointerEvents: 'none'}}></Icon>}
                                 </th>
                         {headers.map((item, index) => (
                             setTh(index,item)
@@ -594,6 +638,10 @@ const MTable: FC<ImTableProps> = (props) => {
                         项
                     </label>
                 </div>
+                <Button style={{width:"30px",position:"absolute",right:"10px",transform:"translateY(-50%)",top:"50%"}} 
+                    data-tooltip-id="table-tooltips" data-tooltip-content={"表头设置"}>
+                <Icon icon="bars"/>
+                </Button>
             </div>
         </div>
         

@@ -22,6 +22,9 @@ table{
         }
         th{
             background-color: white;
+            &.sortable-column{
+              cursor: pointer;
+            }
         }
         th:not(last-child){
             border-right: 1px solid #ddd;
