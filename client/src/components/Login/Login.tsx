@@ -61,7 +61,7 @@ const Login: React.FC = () => {
   };
   const navigate = useNavigate();
   useEffect(() => {
-    if(user!==null && token!==null && token==="G5xEcmNCRnJ3Cxv7VEh2Xw=="){
+    if(token!==null && token==="G5xEcmNCRnJ3Cxv7VEh2Xw=="){
       const query=`select * from user_list where userName = N'${user}' AND isDisabled = 0;`
         console.log("saveData",query)
         setWarning(null)
@@ -85,8 +85,11 @@ const Login: React.FC = () => {
   
         })
     }else{
-      navigate('/login');
-      setWarning("账户有问题，请与管理员联系!")
+      if(user!==null){
+
+        navigate('/login');
+        setWarning("账户有问题，请与管理员联系!")
+      }
     }
   }, []);
   
@@ -128,8 +131,8 @@ const Login: React.FC = () => {
 
   return (
     <div className='login-container'>
-        <h2>档案归档</h2>
-        {warning && <p style={{color:"red"}}>{warning}</p>}
+        <h4>档案归档</h4>
+        {warning && <p style={{color:"red",marginTop:"20px",marginBottom:"-20px"}}>{warning}</p>}
       <form className="form-user-login" onSubmit={handleSubmit}>
         <div className='form-item-container'>
           <label><span style={{color:"red"}}>*</span>用户名</label>

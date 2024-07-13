@@ -145,7 +145,7 @@ table{
     text-align: right;
     display: inline-block;
     margin-top:20px;
-
+    padding:20px;
   }
   /* Close button */
   .close-button {
@@ -178,4 +178,28 @@ table{
   
   .pagination span {
     margin: 0 10px;
+  }
+  .column-list{
+    margin:1px;
+    list-style-type: none;
+    max-height: 300px;
+    overflow-y: auto;
+    padding:0;
+    li{
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+      padding:8px 5px 8px 20px;
+      &:first-child{
+        border-radius: 5px 5px 0 0;
+      }
+      &:last-child{
+        border-radius:  0 0 5px 5px;
+      }
+      &:hover{
+        background-color: #e5f5ff;
+      }
+    }
+  }
+  .column-list-item{
+    
   }

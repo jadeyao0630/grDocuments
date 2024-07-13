@@ -88,7 +88,7 @@ const UserRegister: React.FC = () => {
 
   return (
     <div style={{width:"100%"}}>
-      {submitted && <div className="success-message">注册成功！</div>}
+      {submitted && <div className="success-message" style={{marginTop:"20px",marginBottom:"20px"}}>注册成功！</div>}
       <form className="form-user-register" onSubmit={handleSubmit}>
         <div className='form-item-container'>
           <label><span style={{color:"red"}}>*</span>用户名</label>

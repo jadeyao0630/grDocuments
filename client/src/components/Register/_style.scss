@@ -1,11 +1,18 @@
 .form-user-register{
-    width: 100%;
+    position: absolute;
+    display:inline-block;
+    transform: translate(-50%,-50%);
+    top:50%;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding:40px;
 }
 .form-item-container{
     width: 100%;
     display:grid;
     grid-template-columns: 80px 1fr;
     margin-bottom: 10px;
+    display:inline-block;
     label{
         display: grid;
         grid-template-columns: auto auto;

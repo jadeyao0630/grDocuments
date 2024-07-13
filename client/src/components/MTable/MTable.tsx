@@ -12,6 +12,7 @@ import ReactTooltip ,{ Tooltip, TooltipRefProps } from "react-tooltip";
 import MessageBox from "../MessageBox/MessageBox";
 import Dialog, { useDialog } from "../Dialog/Dialog";
 import Icon from "../Icon/icon";
+import MPopup from "../Popup/MPopup";
 
 // import classNames from "classnames";
 
@@ -51,6 +52,7 @@ const MTable: FC<ImTableProps> = (props) => {
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
     const popupRef = useRef<HTMLImageElement>(null);
     const tooltipRef1 = useRef<TooltipRefProps>(null)
+    const tableColumnSettingsButn = useRef<HTMLButtonElement>(null)
     const [currentItem, setCurrentItem] = useState<Iobject>();
     
     const [message, setMessage] = useState<string | null>(null);
@@ -63,6 +65,27 @@ const MTable: FC<ImTableProps> = (props) => {
     const [sortData, setSortData] = useState<Iobject>({type:"down",id:"createTime"});
 
     const { DialogComponent, showDialog: showDialogHandler } = useDialog();
+    const [isPopupOpen, setIsPopupOpen] = useState(false);
+    
+    const [visibleColumn, setVisibleColumn] = useState([
+        'docId',
+        'createTime',
+        'project',
+        'category',
+        'title',
+        'agent',
+        'person',
+        'location',
+        //'modifiedTime',
+        'remark',
+        'description',
+        'coverPage',
+        //'attachement'
+    ]);
+
+  const togglePopup = () => {
+    setIsPopupOpen(!isPopupOpen);
+  };
   const handlePreviousPage = () => {
     setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
     setGoToPage((prevPage) => Math.max(prevPage - 1, 1));
@@ -208,7 +231,7 @@ const MTable: FC<ImTableProps> = (props) => {
         if(tableColumns.hasOwnProperty(key)){
             const type=tableColumns[key].type
             var style:React.CSSProperties={...tableColumns[key]['style'],textAlign:"left"}
-            if(tableColumns[key].isHide) style={...style, display:'none' }
+            if(!visibleColumn.includes(key)&&!tableColumns[key].isFixed) style={...style, display:'none' }
             var td_item = item[key];
             if (type === "img") {
                 style = { padding: 0,textAlign:"center" };
@@ -261,7 +284,7 @@ const MTable: FC<ImTableProps> = (props) => {
         if(tableColumns.hasOwnProperty(key)){
             const columnData:ColumnData=tableColumns[key]
             var style:React.CSSProperties={...tableColumns[key]['style'],textAlign:"center"}
-            if(columnData.isHide) style={...style, display:'none' }
+            if(!visibleColumn.includes(key)&&!columnData.isFixed) style={...style, display:'none' }
             if(columnData.width) style={...style, width: columnData.width }
             if(columnData.style) style={...style, ...columnData.style }
             var th_item=columnData.label;
@@ -322,12 +345,12 @@ const MTable: FC<ImTableProps> = (props) => {
                 const result_ = findColumnByLabel(tableColumns, key);
                 if(result_!==undefined){
                     return (
-                        <div key={index}>
-                            <label>
+                        <div style={{display:"grid",gridTemplateColumns:"60px 1fr",justifyItems:"right"}} key={index}>
+                            <label style={{alignSelf:"center"}}>
                                 {tableColumns[key].label}:
-                                {getItem(result_,key,currentItem)}
                             </label>
-                            <br />
+                            
+                            {getItem(result_,key,currentItem)}
                         </div>
                         
                     )
@@ -369,7 +392,7 @@ const MTable: FC<ImTableProps> = (props) => {
                         method: 'POST',
                         body: JSON.stringify({ type: 'mssql',query:`
                           UPDATE documents_list 
-                          SET isDisabled = 1
+                          SET isDisabled = 1, modifiedTime = N'${new Date().toISOString()}'
                           WHERE docId = ${currentItem.docId}
                           `})
                       })
@@ -518,8 +541,13 @@ const MTable: FC<ImTableProps> = (props) => {
             onChange={(val)=>onSelectValueChanged(val,key,item)}
             onAdd={(added)=>onTagAdded(added,key,item)}
             ></Dropdown>
+        }else if(columnData.type === "file"){
+            return <div key={key} style={{display:"grid", width:width,margin:"5px 0px 5px 10px",textAlign:"left",overflowY:"auto",maxHeight:"200px",pointerEvents: "none",opacity: "0.6" }}>
+                {item[key] ? (<ul style={{}}>
+                {item[key].split(',').map((itm:string)=><li>{itm}<Button><Icon icon="times" style={{color:"red"}}></Icon></Button></li>)}
+            </ul>):(<span style={{}}>无</span>)} <Input type="file" /></div>
         }
-        return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type='text' name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
+        return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type={columnData.type} name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
     }
     const onSelectValueChanged=(selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>,key:string,item:Iobject) => {
         console.log(selectedOptions)
@@ -528,6 +556,13 @@ const MTable: FC<ImTableProps> = (props) => {
         console.log(updatedItem);
         setCurrentItem(updatedItem);
     }
+    const handleCheckboxChange = (key: string) => {
+        setVisibleColumn(prevState =>
+          prevState.includes(key)
+            ? prevState.filter(column => column !== key)
+            : [...prevState, key]
+        );
+      };
     return (
         <div style={{...style,...{}}}>
             <table>
@@ -609,6 +644,18 @@ const MTable: FC<ImTableProps> = (props) => {
                 </div>
                 </div>
             )}
+            {<MPopup isOpen={isPopupOpen} togglePopup={togglePopup} buttonText="Click me" tiggerElement={tableColumnSettingsButn}>
+                {tableColumns && <ul className="column-list">{Object.keys(tableColumns).map((key,index)=>(
+                    tableColumns[key].isFixed?
+                    <></>:
+                    <li className="column-list-item" key={index} onClick={() => handleCheckboxChange(key)}>
+                        <Input type="checkbox" checked={visibleColumn.includes(key)} onChange={(e) => {
+                      e.stopPropagation(); // 阻止事件冒泡
+                      handleCheckboxChange(key);
+                    }}></Input>{tableColumns[key].label}
+                    </li>
+                    ))}</ul>}
+            </MPopup>}
             <div className="pagination">
                 <Button onClick={handlePreviousPage} disabled={currentPage === 1}>
                 <Icon icon="angle-left"/>
@@ -638,8 +685,8 @@ const MTable: FC<ImTableProps> = (props) => {
                         项
                     </label>
                 </div>
-                <Button style={{width:"30px",position:"absolute",right:"10px",transform:"translateY(-50%)",top:"50%"}} 
-                    data-tooltip-id="table-tooltips" data-tooltip-content={"表头设置"}>
+                <Button ref={tableColumnSettingsButn} style={{width:"30px",position:"absolute",right:"10px",transform:"translateY(-50%)",top:"50%"}} 
+                    data-tooltip-id="table-tooltips" data-tooltip-content={"表头设置"} onClick={togglePopup}>
                 <Icon icon="bars"/>
                 </Button>
             </div>
