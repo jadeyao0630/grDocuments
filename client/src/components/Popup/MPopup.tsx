@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, ReactNode } from 'react';
 
 
 interface PopupProps {
-  buttonText: string;
   children?:ReactNode
   isOpen: boolean;
   togglePopup: () => void;

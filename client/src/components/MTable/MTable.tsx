@@ -13,6 +13,9 @@ import MessageBox from "../MessageBox/MessageBox";
 import Dialog, { useDialog } from "../Dialog/Dialog";
 import Icon from "../Icon/icon";
 import MPopup from "../Popup/MPopup";
+import Modal from 'react-modal';
+import { previewFile } from "file-preview";
+  
 
 // import classNames from "classnames";
 
@@ -67,6 +70,10 @@ const MTable: FC<ImTableProps> = (props) => {
     const { DialogComponent, showDialog: showDialogHandler } = useDialog();
     const [isPopupOpen, setIsPopupOpen] = useState(false);
     
+  const [files, setFiles] = useState<File[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [modalIsOpen, setModalIsOpen] = useState(false);
+    
     const [visibleColumn, setVisibleColumn] = useState([
         'docId',
         'createTime',
@@ -82,7 +89,31 @@ const MTable: FC<ImTableProps> = (props) => {
         'coverPage',
         //'attachement'
     ]);
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files) {
+          const fileArray = Array.from(event.target.files);
+          setFiles([...files, ...fileArray]);
+        }
+    };
+    const handleFileClick = (file: File|undefined) => {
+        if(file){
+            previewFile(file);
+            setSelectedFile(file);
+        }
+    //setModalIsOpen(true);
+    };
+    
+    const handleFileDelected = (file: File|undefined) => {
+        if(file){
 
+            setFiles(files.filter((f) => f !== file));
+        }
+    }
+
+    const _closeModal = () => {
+    setModalIsOpen(false);
+    setSelectedFile(null);
+    };
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
   };
@@ -150,6 +181,7 @@ const MTable: FC<ImTableProps> = (props) => {
     
       const closeModal = () => {
         setCurrentItem(undefined)
+        setFiles([])
         //setIsModalOpen(false);
       };
       const closePopup = () => {
@@ -542,10 +574,16 @@ const MTable: FC<ImTableProps> = (props) => {
             onAdd={(added)=>onTagAdded(added,key,item)}
             ></Dropdown>
         }else if(columnData.type === "file"){
-            return <div key={key} style={{display:"grid", width:width,margin:"5px 0px 5px 10px",textAlign:"left",overflowY:"auto",maxHeight:"200px",pointerEvents: "none",opacity: "0.6" }}>
-                {item[key] ? (<ul style={{}}>
-                {item[key].split(',').map((itm:string)=><li>{itm}<Button><Icon icon="times" style={{color:"red"}}></Icon></Button></li>)}
-            </ul>):(<span style={{}}>无</span>)} <Input type="file" /></div>
+
+            return <div className="form-input-wList-container" key={key} style={{display:"grid", width:width,margin:"5px 0px 5px 10px",textAlign:"left",
+            //pointerEvents: "none",opacity: "0.6" 
+            }}>
+                {item[key] || files.length>0 ? (<ul style={{paddingLeft:"0",overflowY:"auto",maxHeight:"100px"}}>
+                {[...(item[key]?item[key].split(','):[]),...files.map(f=>f.name)].map((itm:string,index:number)=><li key={index} style={{ display:"grid",gridTemplateColumns:"1fr auto",width:"calc(100%)"}} >
+                        <label style={{display:"block",whiteSpace: "nowrap",overflow: "hidden",textOverflow: "ellipsis"}} onClick={() => handleFileClick(files.find(f=>f.name===itm))}>{itm}</label>
+                        <Button className="form-input-wList-delete" style={{width:"30px",border:"none"}} onClick={(e)=>handleFileDelected(files.find(f=>f.name===itm))}><Icon icon="times" style={{color:"red"}}></Icon></Button>
+                    </li>)}
+            </ul>):(<></>)} <Input type="file" className="form-input-wList" multiple onChange={handleFileChange}/></div>
         }
         return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type={columnData.type} name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
     }
@@ -562,6 +600,23 @@ const MTable: FC<ImTableProps> = (props) => {
             ? prevState.filter(column => column !== key)
             : [...prevState, key]
         );
+      };
+      const customStyles = {
+        content: {
+          top: '50%',
+          left: '50%',
+          right: 'auto',
+          bottom: 'auto',
+          marginRight: '-50%',
+          transform: 'translate(-50%, -50%)',
+          width:'100%',
+          height:'100%',
+          zIndex: 1900,  // Custom z-index for modal content
+        },
+        overlay: {
+          backgroundColor: 'rgba(0, 0, 0, 0.75)',
+          zIndex: 1899,  // Custom z-index for modal overlay
+        },
       };
     return (
         <div style={{...style,...{}}}>
@@ -633,7 +688,7 @@ const MTable: FC<ImTableProps> = (props) => {
                 <div className="modal">
                 <div className="modal-content">
                     <span className="close-button" onClick={closeModal}>&times;</span>
-                    <div style={{textAlign:"left",fontWeight:700}}>{currentItem['docId']}</div>
+                    <div style={{textAlign:"center",fontWeight:700}}>{currentItem['docId']}</div>
                     <div className="modal-form">
                         {createForm()}
                     </div>
@@ -644,7 +699,7 @@ const MTable: FC<ImTableProps> = (props) => {
                 </div>
                 </div>
             )}
-            {<MPopup isOpen={isPopupOpen} togglePopup={togglePopup} buttonText="Click me" tiggerElement={tableColumnSettingsButn}>
+            {<MPopup isOpen={isPopupOpen} togglePopup={togglePopup} tiggerElement={tableColumnSettingsButn}>
                 {tableColumns && <ul className="column-list">{Object.keys(tableColumns).map((key,index)=>(
                     tableColumns[key].isFixed?
                     <></>:
@@ -656,6 +711,33 @@ const MTable: FC<ImTableProps> = (props) => {
                     </li>
                     ))}</ul>}
             </MPopup>}
+            <Modal style={customStyles} isOpen={modalIsOpen} onRequestClose={closeModal}>
+        <button onClick={_closeModal}>Close</button>
+        {selectedFile && (
+          <div>
+            <h2>{selectedFile.name}</h2>
+            {selectedFile.type.startsWith('image/') && (
+              <img
+                src={URL.createObjectURL(selectedFile)}
+                alt={selectedFile.name}
+                style={{ maxWidth: '100%' }}
+              />
+            )}
+            {selectedFile.type.startsWith('text/') && (
+              <textarea
+                value={URL.createObjectURL(selectedFile)}
+                readOnly
+                rows={10}
+                style={{ width: '100%' }}
+              />
+            )}
+            {!selectedFile.type.startsWith('image/') &&
+              !selectedFile.type.startsWith('text/') && (
+                <p>File type not supported for preview</p>
+              )}
+          </div>
+        )}
+      </Modal>
             <div className="pagination">
                 <Button onClick={handlePreviousPage} disabled={currentPage === 1}>
                 <Icon icon="angle-left"/>

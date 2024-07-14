@@ -155,7 +155,7 @@ const SearchBar: FC<ISearchBarProps> = (props) => {
       })):[])
     },[tags])
     //console.log("tags",tags,_tags)
-    return <div ref={self} style={{display:"flex",width:"100%",position:"fixed",top:"49px",background:"white",zIndex:"999"}}>
+    return <div className="search-bar-container" ref={self} style={{}}>
                 <Dropdown 
                   style={{margin:"5px 0px 5px 5px",textAlign:'left',width:"30%"}}
                   options={projects?projects.filter((data)=>Number(data.isDisabled)===0).map((data) => ({

@@ -1,3 +1,12 @@
+.search-bar-container{
+    display:flex;
+    width:100%;
+    position:fixed;
+    top:49px;
+    background:white;
+    z-index:999;
+    //border-bottom: 2px solid red;
+}
 .search-tag{
     display: inline-block;
     border-radius: 5px;

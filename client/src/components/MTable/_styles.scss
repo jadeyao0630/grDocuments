@@ -16,12 +16,14 @@ table{
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 200px; /* 你可以根据需要调整这个值 */
+            border-right: 1px solid #ddd;
             *{
                 vertical-align: middle;
             }
         }
         th{
             background-color: white;
+            border-top: 1px solid #ddd;
             &.sortable-column{
               cursor: pointer;
             }
@@ -182,13 +184,13 @@ table{
   .column-list{
     margin:1px;
     list-style-type: none;
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
     padding:0;
     li{
       text-align: left;
       border-bottom: 1px solid #ddd;
-      padding:8px 5px 8px 20px;
+      padding:8px 20px 8px 20px;
       &:first-child{
         border-radius: 5px 5px 0 0;
       }
@@ -202,4 +204,38 @@ table{
   }
   .column-list-item{
     
+  }
+  .form-input-wList-container{
+    border:1px solid #ddd;
+    border-radius: 5px;
+    padding:.5rem .5rem;
+    &:focus{
+      box-shadow: $focused-boxShadow;
+    }
+    ul{
+      
+      margin-bottom: 5px;
+      li>label{
+          //background-color: #e5f5ff;
+          &:hover{color:blue;}
+          cursor: pointer;
+      }
+      li>button{
+          // background-color: transparent;
+          // &:hover{
+          //   background-color: transparent;
+          // }
+      }
+    }
+  }
+  .form-input-wList{
+    border:none;
+    &:focus{
+      box-shadow: none;
+    }
+  }
+  .form-input-wList-delete{
+    &:focus{
+      box-shadow: none;
+    }
   }
