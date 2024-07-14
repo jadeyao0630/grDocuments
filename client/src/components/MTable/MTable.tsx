@@ -14,8 +14,9 @@ import Dialog, { useDialog } from "../Dialog/Dialog";
 import Icon from "../Icon/icon";
 import MPopup from "../Popup/MPopup";
 import Modal from 'react-modal';
-import { previewFile } from "file-preview";
-  
+import { renderAsync } from 'docx-preview';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
 
 // import classNames from "classnames";
 
@@ -73,6 +74,9 @@ const MTable: FC<ImTableProps> = (props) => {
   const [files, setFiles] = useState<File[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | ArrayBuffer | null>(null);
+  const [previewType, setPreviewType] = useState<string | null>(null);
     
     const [visibleColumn, setVisibleColumn] = useState([
         'docId',
@@ -95,12 +99,41 @@ const MTable: FC<ImTableProps> = (props) => {
           setFiles([...files, ...fileArray]);
         }
     };
-    const handleFileClick = (file: File|undefined) => {
+    const handleFileClick = async (file: File|undefined) => {
         if(file){
-            previewFile(file);
+            const fileURL = URL.createObjectURL(file);
+            if (file.name.endsWith('.docx')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const container = document.createElement('div');
+                await renderAsync(arrayBuffer, container);
+                setPreviewContent(container.innerHTML);
+            } else if (file.name.endsWith('.xlsx')|| file.name.endsWith('.xls') || file.name.endsWith('.csv')) {
+                const data = await file.arrayBuffer();
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const htmlString = XLSX.utils.sheet_to_html(firstSheet);
+                setPreviewContent(htmlString);
+            }else {
+                
+                if (file.type.startsWith('image/')) {
+                    const fileReader = new FileReader();
+                    fileReader.onload = async (e) => {
+                        if (file.type.startsWith('image/')) {
+                            setPreviewSrc(fileReader.result);
+                            setPreviewType(file.type);
+                        } 
+                    }
+                    fileReader.readAsDataURL(file);
+                }else {
+                    setPreviewContent(`<iframe src="${fileURL}" width="100%" height="100%" style="border: none;margin:-3px;"></iframe>`);
+                }
+
+                //window.open(fileURL, '_blank', 'width=800,height=600,scrollbars=yes');
+                //
+            }
             setSelectedFile(file);
         }
-    //setModalIsOpen(true);
+        setModalIsOpen(true);
     };
     
     const handleFileDelected = (file: File|undefined) => {
@@ -583,7 +616,8 @@ const MTable: FC<ImTableProps> = (props) => {
                         <label style={{display:"block",whiteSpace: "nowrap",overflow: "hidden",textOverflow: "ellipsis"}} onClick={() => handleFileClick(files.find(f=>f.name===itm))}>{itm}</label>
                         <Button className="form-input-wList-delete" style={{width:"30px",border:"none"}} onClick={(e)=>handleFileDelected(files.find(f=>f.name===itm))}><Icon icon="times" style={{color:"red"}}></Icon></Button>
                     </li>)}
-            </ul>):(<></>)} <Input type="file" className="form-input-wList" multiple onChange={handleFileChange}/></div>
+            </ul>):(<></>)} <Input type="file" className="form-input-wList" multiple 
+                    accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={handleFileChange}/></div>
         }
         return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type={columnData.type} name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
     }
@@ -711,33 +745,25 @@ const MTable: FC<ImTableProps> = (props) => {
                     </li>
                     ))}</ul>}
             </MPopup>}
-            <Modal style={customStyles} isOpen={modalIsOpen} onRequestClose={closeModal}>
-        <button onClick={_closeModal}>Close</button>
-        {selectedFile && (
-          <div>
-            <h2>{selectedFile.name}</h2>
-            {selectedFile.type.startsWith('image/') && (
-              <img
-                src={URL.createObjectURL(selectedFile)}
-                alt={selectedFile.name}
-                style={{ maxWidth: '100%' }}
-              />
+            {previewContent && (
+                <div style={{position:"fixed",zIndex:"1200",top:"0",left:"0",width:"100%",height:"100%",padding:"10px",background:"white" }}>
+                    <h3>{selectedFile?.name}</h3>
+                    <span className="close-button" style={{position:"fixed",zIndex:"1201",top:"0",right:"10px"}} onClick={()=>setPreviewContent(null)}>&times;</span>
+                    <div style={{border:"1px solid #ddd", marginTop:"0px", padding:"3px",width:"100%",height:"calc(100% - 60px)",overflow:"auto"}}
+                            dangerouslySetInnerHTML={{ __html: previewContent }}
+                        ></div>
+                </div>
+
             )}
-            {selectedFile.type.startsWith('text/') && (
-              <textarea
-                value={URL.createObjectURL(selectedFile)}
-                readOnly
-                rows={10}
-                style={{ width: '100%' }}
-              />
+            {previewSrc && previewType && (
+                <div style={{ position:"fixed",zIndex:"1200",top:"0",left:"0",width:"100%",height:"100%",padding:"10px",background:"white" }}>
+                    <h3>{selectedFile?.name}</h3>
+                    <span className="close-button" style={{position:"fixed",zIndex:"1201",top:"0",right:"10px"}} onClick={()=>setPreviewSrc(null)}>&times;</span>
+                    {previewType.startsWith('image/') && <img src={previewSrc as string} alt="Preview" style={{ maxWidth: '100%', maxHeight: '100%' }} />}
+                    {previewType === 'application/pdf' && <embed src={previewSrc as string} type="application/pdf" width="100%" height="100%" />}
+                    
+                </div>
             )}
-            {!selectedFile.type.startsWith('image/') &&
-              !selectedFile.type.startsWith('text/') && (
-                <p>File type not supported for preview</p>
-              )}
-          </div>
-        )}
-      </Modal>
             <div className="pagination">
                 <Button onClick={handlePreviousPage} disabled={currentPage === 1}>
                 <Icon icon="angle-left"/>
