@@ -108,9 +108,10 @@ const MTable: FC<ImTableProps> = (props) => {
           }
           return undefined
     }
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>,item:Iobject,key:string) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>,item:File[]) => {
         if (event.target.files) {
-            item[key]=Array.from(event.target.files).map(f=>f.name).join(",")
+            //item[key]=Array.from(event.target.files).map(f=>f.name).join(",")
+            setCurrentItem({...currentItem,attachement:[...item,...Array.from(event.target.files)].map(f=>f.name).join(",")})
           //const fileArray = [...files, ...Array.from(event.target.files)];
             //setCurrentItem({...currentItem,attachement:fileArray.map(f=>f.name).join(",")});
             //setFiles(fileArray);
@@ -159,10 +160,10 @@ const MTable: FC<ImTableProps> = (props) => {
         setModalIsOpen(true);
     };
     
-    const handleFileDelected = (file: File|undefined) => {
+    const handleFileDelected = (file: File|undefined,files:File[]) => {
         if(file){
 
-            setFiles(files.filter((f) => f !== file));
+            setCurrentItem({...currentItem,attachement:files.filter(f=>f.name!==file.name).map(f=>f.name).join(",")})
         }
     }
 
@@ -690,11 +691,11 @@ const MTable: FC<ImTableProps> = (props) => {
               {newFiles.map((itm: File, index: number) => <li key={index} style={{ display: "grid", gridTemplateColumns: "1fr auto", width: "calc(100%)" }} >
                 <label style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} onClick={() => handleFileClick(itm)}>{itm.name}</label>
                 <Button className="form-input-wList-delete" style={{ width: "30px", border: "none" }} onClick={(e) =>
-                  handleFileDelected(itm)
+                  handleFileDelected(itm,newFiles)
                 }><Icon icon="times" style={{ color: "red" }}></Icon></Button>
               </li>)}
             </ul>) : (<></>)} <Input type="file" className="form-input-wList" multiple
-              accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, item, key)} /></div>;
+              accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, newFiles)} /></div>;
         }
         return <Input style={{ width: width, margin: "5px 0px 5px 10px" }} type={columnData.type} name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { onTextChanged(e, key, item) }} />;
       };
