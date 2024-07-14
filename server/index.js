@@ -4,6 +4,7 @@ const cors = require('cors');
 const path = require('path');
 const xlsx = require('xlsx');
 const WebSocket = require('ws');
+const iconv = require('iconv-lite');
 
 const CryptoJS = require('crypto-js')
 
@@ -258,26 +259,83 @@ app.post('/init',async(request,response)=>{
     }
 
 });
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+      const folder = req.body.folder || 'default';
+      const dir = path.join(__dirname, 'uploads', folder);
+      if (!fs.existsSync(dir)) {
+          fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+      cb(null, `${file.originalname}`);
+  }
+});
+const uploadFiles = multer({ storage });
+app.post('/uploadFiles', upload.array('files'), async (req, res) => {
+  if (!req.files || !req.body.folder) {
+    return res.status(400).send('No files uploaded or folder not specified.');
+  }
 
+  const files = req.files;
+  const folder = req.body.folder;
+  const uploadPath = path.join(env.UPLOADS_PATH, folder);
+
+  // 确保目录存在
+  fs.mkdirSync(uploadPath, { recursive: true });
+
+  try {
+    // 获取目录中的现有文件列表
+    const existingFiles = fs.readdirSync(uploadPath);
+
+    // 处理上传的文件
+    const uploadedFiles = await Promise.all(files.map(async file => {
+      const decodedOriginalName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
+      const targetPath = path.join(uploadPath, decodedOriginalName);
+
+      // 复制文件到指定目录并删除原文件
+      await fs.promises.copyFile(file.path, targetPath);
+      await fs.promises.unlink(file.path);
+
+      return decodedOriginalName;
+    }));
+
+    // 删除未上传的现有文件
+    existingFiles.forEach(existingFile => {
+      if (!uploadedFiles.includes(existingFile)) {
+        const filePath = path.join(uploadPath, existingFile);
+        fs.unlinkSync(filePath);
+      }
+    });
+
+    res.status(200).send('Files uploaded and directory synchronized successfully.');
+  } catch (error) {
+    console.error(error);
+    res.status(500).send('An error occurred while uploading files.');
+  }
+});
 app.post('/upload', upload.single('file'), async (req, res) => {
     if (!req.file) {
       return res.status(400).send('No file uploaded.');
     }
     const file = req.file;
     const folder = req.body.folder; // 获取附带的参数
+    const isEncryptFileName=req.body.isEncrypted
     const uploadPath = path.join(env.UPLOADS_PATH, folder);
 
     // 确保目录存在
     fs.mkdirSync(uploadPath, { recursive: true });
     const extension=path.extname(file.originalname);
     const filename=file.fieldname;
-    const encryptedFileName=encryptMD5(new Date().getTime()+filename)+extension;
+    const encryptedFileName=isEncryptFileName?encryptMD5(new Date().getTime()+filename)+extension:filename+extension;
 
     const targetPath = path.join(env.UPLOADS_PATH, folder, encryptedFileName);
 
     // 移动文件到指定目录
-    fs.renameSync(file.path, targetPath);
-
+    //fs.renameSync(file.path, targetPath);
+    await fs.promises.copyFile(file.path, targetPath);
+    await fs.promises.unlink(file.path);
     // 生成缩略图
     const thumbnailPath = path.join(env.UPLOADS_PATH, folder, 'thumb_' + encryptedFileName);
     const image = await Jimp.read(targetPath)

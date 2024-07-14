@@ -56,6 +56,7 @@ const MTable: FC<ImTableProps> = (props) => {
     const [hoveredImage, setHoveredImage] = useState<string | null>(null);
     const popupRef = useRef<HTMLImageElement>(null);
     const tooltipRef1 = useRef<TooltipRefProps>(null)
+    const fileListRef = useRef<HTMLUListElement>(null)
     const tableColumnSettingsButn = useRef<HTMLButtonElement>(null)
     const [currentItem, setCurrentItem] = useState<Iobject>();
     
@@ -93,10 +94,32 @@ const MTable: FC<ImTableProps> = (props) => {
         'coverPage',
         //'attachement'
     ]);
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const url2File = async(url:string,folder:string) => {
+        try {
+            const response = await fetch(`http://${serverIp}:${serverPort}/preview?folder=${folder}&fileName=${url}`);
+            const data = await response.blob();
+            const fileName = url.split('/').pop() || 'downloadedFile';
+            const fileType = data.type;
+            const file = new File([data], fileName, { type: fileType });
+            console.log('File:', file);
+            return file
+          } catch (error) {
+            console.error('Error fetching file:', error);
+          }
+          return undefined
+    }
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>,item:Iobject,key:string) => {
         if (event.target.files) {
-          const fileArray = Array.from(event.target.files);
-          setFiles([...files, ...fileArray]);
+            item[key]=Array.from(event.target.files).map(f=>f.name).join(",")
+          //const fileArray = [...files, ...Array.from(event.target.files)];
+            //setCurrentItem({...currentItem,attachement:fileArray.map(f=>f.name).join(",")});
+            //setFiles(fileArray);
+            setTimeout(() => {
+                if(fileListRef.current){
+                    fileListRef.current.scrollTop=fileListRef.current.scrollHeight
+                }
+            }, 200);
+          
         }
     };
     const handleFileClick = async (file: File|undefined) => {
@@ -221,6 +244,35 @@ const MTable: FC<ImTableProps> = (props) => {
         setHoveredImage(null);
         //setIsModalOpen(false);
       };
+      const [renderedItems, setRenderedItems] = useState<JSX.Element[]>([]);
+
+      useEffect(() => {
+        const fetchFilesAndRender = async () => {
+          if (currentItem !== undefined) {
+            const items = await Promise.all(
+              Object.keys(currentItem).map(async (key, index) => {
+                const result_ = findColumnByLabel(tableColumns, key);
+                if (result_ !== undefined) {
+                  const item = await getItem(result_, key, currentItem);
+                  return (
+                    <div style={{ display: "grid", gridTemplateColumns: "60px 1fr", justifyItems: "right" }} key={index}>
+                      <label style={{ alignSelf: "center" }}>
+                        {tableColumns[key].label}:
+                      </label>
+                      {item}
+                    </div>
+                  );
+                }
+                return null;
+              })
+            );
+            // 过滤掉可能的 null 值
+            setRenderedItems(items.filter(item => item !== null) as JSX.Element[]);
+          }
+        };
+        fetchFilesAndRender();
+      }, [currentItem, tableColumns]);
+
       useEffect(() => {
 
         tableColumns.category.data=categories?.filter((data)=>Number(data.isDisabled)===0).map((data) => ({
@@ -409,16 +461,7 @@ const MTable: FC<ImTableProps> = (props) => {
             return Object.keys(currentItem).map((key,index)=>{
                 const result_ = findColumnByLabel(tableColumns, key);
                 if(result_!==undefined){
-                    return (
-                        <div style={{display:"grid",gridTemplateColumns:"60px 1fr",justifyItems:"right"}} key={index}>
-                            <label style={{alignSelf:"center"}}>
-                                {tableColumns[key].label}:
-                            </label>
-                            
-                            {getItem(result_,key,currentItem)}
-                        </div>
-                        
-                    )
+                    return {renderedItems}
                 }
                 return null;
             })
@@ -486,9 +529,14 @@ const MTable: FC<ImTableProps> = (props) => {
         var keys:string[]=[];
         var values_keys:string[]=[]
         var source_key:string[]=[];
+
         Object.keys(updatedItem).forEach(k=>{
             if(k!=="id"){
-                values.push(k==="docId"||k==="categoryId"||k==="projectId"||k==="locationId"||k==="isDisabled"?(k==="isDisabled"?0:updatedItem[k]):"N'"+updatedItem[k]+"'")
+                values.push(
+                    k==="docId"||k==="categoryId"||k==="projectId"||k==="locationId"||k==="isDisabled"?
+                    (k==="isDisabled"?0:updatedItem[k])
+                    :
+                    "N'"+updatedItem[k]+"'")
                 keys.push(k)
                 values_keys.push(`${k} = source.${k}`)
                 source_key.push(`source.${k}`)
@@ -503,7 +551,7 @@ const MTable: FC<ImTableProps> = (props) => {
         WHEN NOT MATCHED THEN
             INSERT (${values.join(", ")})
             VALUES (${source_key.join(", ")});
-        `)
+        `,updatedItem)
         fetch("http://"+serverIp+":"+serverPort+"/saveData",{
           headers:{
             'Content-Type': 'application/json'
@@ -525,6 +573,21 @@ const MTable: FC<ImTableProps> = (props) => {
             console.log("saveData",data)
             showMessage(data.data.rowsAffected.length>0?"执行完成":"执行失败")
         })
+        if(files && files.length>0){
+            const formData = new FormData();
+            formData.append('folder', updatedItem["docId"]);
+            files.forEach(file => {
+                formData.append('files', file);
+            });
+            try {
+                fetch(`http://${serverIp}:${serverPort}/uploadFiles`, {
+                    method: 'POST',
+                    body: formData,
+                }).then(r=>console.log(r));
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
         if(tagsToAdd!==undefined && tagsToAdd.length>0){
             var queries:string[]=[]
             tagsToAdd?.forEach(tag=>{
@@ -588,39 +651,53 @@ const MTable: FC<ImTableProps> = (props) => {
     const getValues = (values:string,columnData:ColumnData) => {
         return values?(values.constructor===String?getValuesFromLabels(values,columnData):[values]):(columnData.value?columnData.value:[])
     }
-    const getItem = (columnData:ColumnData,key:string,item:Iobject) => {
-        const width=300
-        if(columnData.type==="text"){
-            return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type='text' name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
-        }else if(columnData.type==="textarea"){
-            return <textarea className="gr-textarea"  style={{width:width,margin:"5px 0px 5px 10px"}} name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLTextAreaElement>)=>{onTextChanged(e,key,item)}}/>
-        }else if (columnData.type==="combobox" || columnData.type==='multiCombobox'){
-            console.log(item[key],item[key].constructor,item[key].constructor===String?getValuesFromLabels(item[key].toString(),columnData):item[key])
-            return <Dropdown 
-            defaultValues={getValues(item[key],columnData)}
-            style={{width:width,display:"inline-block",margin:"5px 0px 5px 10px",textAlign:'left'}}
-            options={columnData.data?columnData.data:[]}
-            isMulti={columnData.type==='multiCombobox'}
-            showDropIndicator={columnData.type==='multiCombobox'}
-            showInput={columnData.type==='multiCombobox'}
-            onChange={(val)=>onSelectValueChanged(val,key,item)}
-            onAdd={(added)=>onTagAdded(added,key,item)}
-            ></Dropdown>
-        }else if(columnData.type === "file"){
 
-            return <div className="form-input-wList-container" key={key} style={{display:"grid", width:width,margin:"5px 0px 5px 10px",textAlign:"left",
+    const getItem = async (columnData: ColumnData, key: string, item: Iobject): Promise<JSX.Element> => {
+        const width = 300;
+        if (columnData.type === "text") {
+          return <Input style={{ width: width, margin: "5px 0px 5px 10px" }} type='text' name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { onTextChanged(e, key, item) }} />;
+        } else if (columnData.type === "textarea") {
+          return <textarea className="gr-textarea" style={{ width: width, margin: "5px 0px 5px 10px" }} name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => { onTextChanged(e, key, item) }} />;
+        } else if (columnData.type === "combobox" || columnData.type === 'multiCombobox') {
+          console.log(item[key], item[key].constructor, item[key].constructor === String ? getValuesFromLabels(item[key].toString(), columnData) : item[key]);
+          return <Dropdown
+            defaultValues={getValues(item[key], columnData)}
+            style={{ width: width, display: "inline-block", margin: "5px 0px 5px 10px", textAlign: 'left' }}
+            options={columnData.data ? columnData.data : []}
+            isMulti={columnData.type === 'multiCombobox'}
+            showDropIndicator={columnData.type === 'multiCombobox'}
+            showInput={columnData.type === 'multiCombobox'}
+            onChange={(val) => onSelectValueChanged(val, key, item)}
+            onAdd={(added) => onTagAdded(added, key, item)}
+          ></Dropdown>;
+        } else if (columnData.type === "file") {
+          const newFiles: File[] = [];
+          if (item[key]) {
+            const fs = item[key].split(',');
+            const filePromises = fs.map(async (f: string) => {
+              const ff = await url2File(f,item['docId']);
+              console.log("inside loop", ff);
+              if (ff) newFiles.push(ff);
+            });
+            await Promise.all(filePromises);
+          }
+          console.log("out", newFiles);
+          return <div className="form-input-wList-container" key={key} style={{
+            display: "grid", width: width, margin: "5px 0px 5px 10px", textAlign: "left",
             //pointerEvents: "none",opacity: "0.6" 
-            }}>
-                {item[key] || files.length>0 ? (<ul style={{paddingLeft:"0",overflowY:"auto",maxHeight:"100px"}}>
-                {[...(item[key]?item[key].split(','):[]),...files.map(f=>f.name)].map((itm:string,index:number)=><li key={index} style={{ display:"grid",gridTemplateColumns:"1fr auto",width:"calc(100%)"}} >
-                        <label style={{display:"block",whiteSpace: "nowrap",overflow: "hidden",textOverflow: "ellipsis"}} onClick={() => handleFileClick(files.find(f=>f.name===itm))}>{itm}</label>
-                        <Button className="form-input-wList-delete" style={{width:"30px",border:"none"}} onClick={(e)=>handleFileDelected(files.find(f=>f.name===itm))}><Icon icon="times" style={{color:"red"}}></Icon></Button>
-                    </li>)}
-            </ul>):(<></>)} <Input type="file" className="form-input-wList" multiple 
-                    accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={handleFileChange}/></div>
+          }}>
+            {newFiles.length > 0 ? (<ul ref={fileListRef} style={{ paddingLeft: "0", overflowY: "auto", maxHeight: "100px" }}>
+              {newFiles.map((itm: File, index: number) => <li key={index} style={{ display: "grid", gridTemplateColumns: "1fr auto", width: "calc(100%)" }} >
+                <label style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} onClick={() => handleFileClick(itm)}>{itm.name}</label>
+                <Button className="form-input-wList-delete" style={{ width: "30px", border: "none" }} onClick={(e) =>
+                  handleFileDelected(itm)
+                }><Icon icon="times" style={{ color: "red" }}></Icon></Button>
+              </li>)}
+            </ul>) : (<></>)} <Input type="file" className="form-input-wList" multiple
+              accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, item, key)} /></div>;
         }
-        return <Input style={{width:width,margin:"5px 0px 5px 10px"}} type={columnData.type} name={key} value={item[key]} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>{onTextChanged(e,key,item)}}/>
-    }
+        return <Input style={{ width: width, margin: "5px 0px 5px 10px" }} type={columnData.type} name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { onTextChanged(e, key, item) }} />;
+      };
     const onSelectValueChanged=(selectedOptions: SingleValue<OptionType> | MultiValue<OptionType>,key:string,item:Iobject) => {
         console.log(selectedOptions)
         const updatedItem = { ...item, [key]: Array.isArray(selectedOptions)?selectedOptions.map(option => option.label).join(', '):
@@ -724,7 +801,7 @@ const MTable: FC<ImTableProps> = (props) => {
                     <span className="close-button" onClick={closeModal}>&times;</span>
                     <div style={{textAlign:"center",fontWeight:700}}>{currentItem['docId']}</div>
                     <div className="modal-form">
-                        {createForm()}
+                        {renderedItems}
                     </div>
                     <div>
                         <Button style={{marginTop:"20px",width:100,marginRight:"10px"}} btnType="blue" hasShadow={true} onClick={onSubmited}>提交</Button>
