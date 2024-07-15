@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDBload } from './DBLoaderContext';
-import {serverIp,serverPort} from '../../utils/config'
+import {serverIp,serverPort, webSocketPort} from '../../utils/config'
 
 type databaseType = 'mysql' | 'mssql'
 
@@ -19,7 +19,7 @@ const DatabaseLoader: React.FC<DatabaseLoaderProps> = (props) => {
     const { setResult,setSearch,setProjects,setCategories,setLocations,setTags,reload,setReload } = useDBload();
     //const [reload, setReload] = useState<Number>();
     useEffect(() => {
-      const ws = new WebSocket(`ws://${serverIp}:3002`);
+      const ws = new WebSocket(`ws://${serverIp}:${webSocketPort}`);
   
       ws.onmessage = (event) => {
           

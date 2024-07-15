@@ -2,9 +2,12 @@ import { Iobject } from "../components/MTable/MTable"
 
 const local ="192.168.10.122"
 const glory ="192.168.10.213"
-export const serverIp=local
-export const serverPort="4555"
-
+const isTest=true
+export const serverIp=glory
+export const serverPort=isTest?"4556":"4555"
+export const webSocketPort=isTest?"3003":"3002"
+export const remoteSotrageServer="http://192.168.10.243/uploads/"
+export const acceptFiles=".xlsx,.docx,.xls,.ppt,.pptx,.pdf,.png,.gif,.jpeg,.jpg,.zip,.rar,.txt"
 export interface ColumnData {
     label: string;
     isEditble?: boolean; // 假设每行数据中有一个fileName字段
@@ -118,9 +121,10 @@ export interface ColumnData {
         label:'备注',
         isEditble:true,
         width:"auto",
-        type:'text',
+        type:'textarea',
         isFilterable:true,
-        canBeExport:true
+        canBeExport:true,
+        sortType:"text"
     },
     description:{
         label:'标签',

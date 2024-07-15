@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import {serverIp,serverPort} from '../../utils/config'
+import {serverIp,serverPort, webSocketPort} from '../../utils/config'
 import Button from '../Button/button';
 import Input from '../Input/input';
 import Icon from '../Icon/icon';
@@ -14,7 +14,7 @@ const FileUpload: React.FC<IFileUploadProp> = (prop) => {
     const [messages, setMessages] = useState<Array<string>>([]);
     const logs = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        const ws = new WebSocket(`ws://${serverIp}:3002`);
+        const ws = new WebSocket(`ws://${serverIp}:${webSocketPort}`);
     
         ws.onmessage = (event) => {
             

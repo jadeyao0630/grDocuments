@@ -1,7 +1,7 @@
 import React, { FC,useState, useEffect, useRef } from "react";
 import { useDBload } from "../../utils/DBLoader/DBLoaderContext";
 import { findColumnByLabel, formatDateTime } from '../../utils/utils';
-import {ColumnData,tableColumns,serverIp,serverPort} from '../../utils/config'
+import {ColumnData,tableColumns,serverIp,serverPort,remoteSotrageServer,acceptFiles} from '../../utils/config'
 
 import Input from "../Input/input";
 import Select, { SelectOption } from "../Select/Select";
@@ -17,6 +17,7 @@ import Modal from 'react-modal';
 import { renderAsync } from 'docx-preview';
 import * as XLSX from 'xlsx';
 import mammoth from 'mammoth';
+import { faUserMd } from "@fortawesome/free-solid-svg-icons";
 
 // import classNames from "classnames";
 
@@ -97,6 +98,7 @@ const MTable: FC<ImTableProps> = (props) => {
     const url2File = async(url:string,folder:string) => {
         try {
             const response = await fetch(`http://${serverIp}:${serverPort}/preview?folder=${folder}&fileName=${url}`);
+            //const response = await fetch(`${remoteSotrageServer}${folder}/${url}`);
             const data = await response.blob();
             const fileName = url.split('/').pop() || 'downloadedFile';
             const fileType = data.type;
@@ -114,7 +116,7 @@ const MTable: FC<ImTableProps> = (props) => {
             setCurrentItem({...currentItem,attachement:[...item,...Array.from(event.target.files)].map(f=>f.name).join(",")})
           //const fileArray = [...files, ...Array.from(event.target.files)];
             //setCurrentItem({...currentItem,attachement:fileArray.map(f=>f.name).join(",")});
-            //setFiles(fileArray);
+            setFiles(Array.from(event.target.files));
             setTimeout(() => {
                 if(fileListRef.current){
                     fileListRef.current.scrollTop=fileListRef.current.scrollHeight
@@ -148,6 +150,12 @@ const MTable: FC<ImTableProps> = (props) => {
                         } 
                     }
                     fileReader.readAsDataURL(file);
+                }else if (file.name.endsWith('.ppt')||file.name.endsWith('.pptx')||file.name.endsWith('.zip')){
+                    const anchor = document.createElement('a');
+                    anchor.href = URL.createObjectURL(file);
+                    anchor.download = file.name;
+                    anchor.click();
+                    anchor.remove();
                 }else {
                     setPreviewContent(`<iframe src="${fileURL}" width="100%" height="100%" style="border: none;margin:-3px;"></iframe>`);
                 }
@@ -160,10 +168,12 @@ const MTable: FC<ImTableProps> = (props) => {
         setModalIsOpen(true);
     };
     
-    const handleFileDelected = (file: File|undefined,files:File[]) => {
+    const handleFileDelected = async (file: File|undefined,files:File[]) => {
         if(file){
-
-            setCurrentItem({...currentItem,attachement:files.filter(f=>f.name!==file.name).map(f=>f.name).join(",")})
+            const userResponse = await showDialogHandler("确定删除吗？")
+            if (userResponse) {
+                setCurrentItem({...currentItem,attachement:files.filter(f=>f.name!==file.name).map(f=>f.name).join(",")})
+            }
         }
     }
 
@@ -524,7 +534,7 @@ const MTable: FC<ImTableProps> = (props) => {
         
         
     }
-    const onSubmited = () => {
+    const onSubmited = async () => {
         const updatedItem:Iobject = { ...currentItem, ['modifiedTime']: new Date().toISOString() };
         var values:string[]=[];
         var keys:string[]=[];
@@ -574,17 +584,36 @@ const MTable: FC<ImTableProps> = (props) => {
             console.log("saveData",data)
             showMessage(data.data.rowsAffected.length>0?"执行完成":"执行失败")
         })
-        if(files && files.length>0){
+        const _files:File[]=[];
+        if(updatedItem['attachement']){
+            const fileNames=updatedItem['attachement'].split(',')
+            
+            for (const fileName of fileNames) {
+                var file;
+                if(files){
+                    file=files.find(f=>f.name===fileName)
+                }
+                if(file===undefined){
+                    file=await url2File(fileName,updatedItem['docId'])
+                }
+                
+                if(file)
+                    _files.push(file)
+            }
+        }
+        if(_files){
             const formData = new FormData();
             formData.append('folder', updatedItem["docId"]);
-            files.forEach(file => {
+            _files.forEach((file, index) => {
+                //console.log("file",file,_files)
                 formData.append('files', file);
             });
+            console.log("formData",formData)
             try {
                 fetch(`http://${serverIp}:${serverPort}/uploadFiles`, {
                     method: 'POST',
                     body: formData,
-                }).then(r=>console.log(r));
+                }).then(r=>console.log("uploadFiles",r));
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -652,9 +681,34 @@ const MTable: FC<ImTableProps> = (props) => {
     const getValues = (values:string,columnData:ColumnData) => {
         return values?(values.constructor===String?getValuesFromLabels(values,columnData):[values]):(columnData.value?columnData.value:[])
     }
-
+    const getIconFromType = (file:File) =>{
+        //FontAwesomeIconProps.icon
+        console.log(file.type)
+        if(file.type.startsWith("image/")) return "file-image"
+        else if(file.type === "application/pdf") return "file-pdf"
+        else if(file.type === "text/plain") return "file-alt"
+        else if (file.name.endsWith('.docx')) return "file-word"
+        else if (file.name.endsWith('.ppt')||file.name.endsWith('.ppts')) return "file-powerpoint"
+        else if (file.name.endsWith('.xlsx')||file.name.endsWith('.xls')) return "file-excel"
+        else if (file.name.endsWith('.csv')) return "file-csv"
+        else if (file.name.endsWith('.zip')||file.name.endsWith('.rar')) return "file-archive"
+        else return "file"
+    }
+    const getColorFromType = (file:File) =>{
+        //FontAwesomeIconProps.icon
+        console.log(file.type)
+        if(file.type.startsWith("image/")) return "#6f42c1"
+        else if(file.type === "application/pdf") return "#dc3545"
+        else if(file.type === "text/plain") return "#17a2b8"
+        else if (file.name.endsWith('.docx')) return "#0d6efd"
+        else if (file.name.endsWith('.ppt')||file.name.endsWith('.ppts')) return "#fd7e14"
+        else if (file.name.endsWith('.xlsx')||file.name.endsWith('.xls')) return "#348a09"
+        else if (file.name.endsWith('.csv')) return "#348a09"
+        else if (file.name.endsWith('.zip')||file.name.endsWith('.rar')) return "#d63384"
+        else return "#20c997"
+    }
     const getItem = async (columnData: ColumnData, key: string, item: Iobject): Promise<JSX.Element> => {
-        const width = 300;
+        const width = 400;
         if (columnData.type === "text") {
           return <Input style={{ width: width, margin: "5px 0px 5px 10px" }} type='text' name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { onTextChanged(e, key, item) }} />;
         } else if (columnData.type === "textarea") {
@@ -676,26 +730,34 @@ const MTable: FC<ImTableProps> = (props) => {
           if (item[key]) {
             const fs = item[key].split(',');
             const filePromises = fs.map(async (f: string) => {
-              const ff = await url2File(f,item['docId']);
+                var ff;
+                if(files && files.find(fss=>fss.name===f)){
+                    ff=files.find(fss=>fss.name===f)
+                }else{
+                    ff = await url2File(f,item['docId']);
+                }
+              
               console.log("inside loop", ff);
               if (ff) newFiles.push(ff);
+              return ff;
             });
             await Promise.all(filePromises);
           }
           console.log("out", newFiles);
-          return <div className="form-input-wList-container" key={key} style={{
+          return <><div className="form-input-wList-container" key={key} style={{
             display: "grid", width: width, margin: "5px 0px 5px 10px", textAlign: "left",
             //pointerEvents: "none",opacity: "0.6" 
           }}>
             {newFiles.length > 0 ? (<ul ref={fileListRef} style={{ paddingLeft: "0", overflowY: "auto", maxHeight: "100px" }}>
-              {newFiles.map((itm: File, index: number) => <li key={index} style={{ display: "grid", gridTemplateColumns: "1fr auto", width: "calc(100%)" }} >
+              {newFiles.map((itm: File, index: number) => <li key={index} style={{alignItems:"center", display: "grid", gridTemplateColumns: "auto 1fr auto", width: "calc(100%)" }} >
+              <Icon icon={getIconFromType(itm)} style={{ color: getColorFromType(itm),fontSize:"larger",marginRight:"3px" }}></Icon>
                 <label style={{ display: "block", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} onClick={() => handleFileClick(itm)}>{itm.name}</label>
                 <Button className="form-input-wList-delete" style={{ width: "30px", border: "none" }} onClick={(e) =>
                   handleFileDelected(itm,newFiles)
                 }><Icon icon="times" style={{ color: "red" }}></Icon></Button>
               </li>)}
             </ul>) : (<></>)} <Input type="file" className="form-input-wList" multiple
-              accept=".xlsx,.docx,.xls,.ppt,.pdf,.png,.gif,.jpeg,.jpg,.zip,txt" onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, newFiles)} /></div>;
+              accept={acceptFiles} onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleFileChange(e, newFiles)} /></div><label style={{gridColumn:"span 2",fontSize:"12px"}}>附件只接受：{acceptFiles}</label></>;
         }
         return <Input style={{ width: width, margin: "5px 0px 5px 10px" }} type={columnData.type} name={key} value={item[key]} onChange={(e: React.ChangeEvent<HTMLInputElement>) => { onTextChanged(e, key, item) }} />;
       };

@@ -7,6 +7,13 @@ const WebSocket = require('ws');
 const iconv = require('iconv-lite');
 
 const CryptoJS = require('crypto-js')
+const { env } = process;
+require('dotenv').config({
+  path: path.resolve(
+      __dirname,
+      `./env.${process.env.NODE_ENV ? process.env.NODE_ENV : "local"}`
+    ),
+});
 
 const keyStr = 'it@glory.com'
 const ivStr = 'it@glory.com'
@@ -41,7 +48,7 @@ function encrypt(data, keyS, ivS) {
   const encrypted = cipher.toString()
   return encrypted
 }
-const wss = new WebSocket.Server({ port: 3002 });
+const wss = new WebSocket.Server({ port: env.WEB_SOCKET_PORT });
 
 wss.on('connection', (ws) => {
   console.log('WebSocket connection established');
@@ -67,13 +74,6 @@ const fs = require('fs');
 const multer = require('multer');
 const Jimp = require('jimp');
 
-const { env } = process;
-require('dotenv').config({
-  path: path.resolve(
-      __dirname,
-      `./env.${process.env.NODE_ENV ? process.env.NODE_ENV : "local"}`
-    ),
-});
 const bodyParser = require('body-parser');
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -291,16 +291,18 @@ app.post('/uploadFiles', upload.array('files'), async (req, res) => {
 
     // 处理上传的文件
     const uploadedFiles = await Promise.all(files.map(async file => {
+      console.log("uploadedFiles inside",file)
       const decodedOriginalName = iconv.decode(Buffer.from(file.originalname, 'latin1'), 'utf8');
       const targetPath = path.join(uploadPath, decodedOriginalName);
 
       // 复制文件到指定目录并删除原文件
-      await fs.promises.copyFile(file.path, targetPath);
-      await fs.promises.unlink(file.path);
+      //await fs.promises.copyFile(file.path, targetPath);
+      fs.renameSync(file.path, targetPath);
+      //await fs.promises.unlink(file.path);
 
       return decodedOriginalName;
     }));
-
+    console.log("uploadedFiles",uploadedFiles,existingFiles,files)
     // 删除未上传的现有文件
     existingFiles.forEach(existingFile => {
       if (!uploadedFiles.includes(existingFile)) {
@@ -363,10 +365,13 @@ app.post('/upload', upload.single('file'), async (req, res) => {
     //res.send('File uploaded successfully.');
   });
 app.get('/preview', async (req, res) => {
-  const fileName = decodeURIComponent(req.query.fileName);
+  
+  const fileName = req.query.fileName;
   const folder = req.query.folder;
+  const filePath = path.join(env.UPLOADS_PATH, folder, fileName);
+  console.log("req.query.fileName",req.query.fileName,fileName,filePath)
   //const filePath = 'uploads/国瑞信息软件表.xlsx';
-  res.sendFile(path.join(env.UPLOADS_PATH,folder,fileName));
+  res.sendFile(filePath);
 });
 app.post('/uploadImage', async (req, res) => {
     try {
@@ -684,6 +689,7 @@ const convertExcelDate = (excelDate) => {
   const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
   return date;
 };
+console.log("env.PORT",env.PORT)
 app.listen(env.PORT, () => {
     console.log(`Server is running on port ${env.PORT}`);
   });

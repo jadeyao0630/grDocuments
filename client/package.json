@@ -15,12 +15,17 @@
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "classnames": "^2.5.1",
+    "cross-env": "^7.0.3",
     "crypto-js": "^4.2.0",
     "date-fns": "^3.6.0",
     "docx-preview": "^0.3.2",
     "file-preview": "^0.0.6",
     "file-saver": "^2.0.5",
+    "jquery": "^3.7.1",
+    "jszip": "^3.10.1",
     "mammoth": "^1.8.0",
+    "pptx2html": "^0.3.4",
+    "pptxgenjs": "^3.12.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-modal": "^3.16.1",
@@ -38,7 +43,7 @@
     "xlsx": "^0.18.5"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "cross-env PORT=3001 react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
