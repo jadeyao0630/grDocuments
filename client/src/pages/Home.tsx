@@ -288,7 +288,7 @@ const Home: React.FC<HomeProps> = ({ showMessage }) => {
         ]} />
       </Header>
       <SearchBar onSizeChanged={setTableMarginTop} />
-      <MTable style={{ marginTop: tableMarginTop }} />
+      <MTable style={{ marginTop: tableMarginTop,position: "absolute",height:"calc(100% - 153px)",width: "100%",overflowY: "auto" }} />
       {showPopup &&
         <div className="popup-background">
           <div className='popup-panel'>

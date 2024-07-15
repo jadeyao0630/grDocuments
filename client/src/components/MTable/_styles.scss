@@ -3,7 +3,6 @@ table{
     position: relative;
     width:100%;
     background-color: white;
-    //height:calc( 100% - 60px);
     tr{
         //z-index: 2;
         //position: relative;
@@ -56,7 +55,7 @@ table{
     }
     thead{
         position:sticky;
-        top:97px;
+        top:0;
         z-index: 99;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
     }
@@ -238,4 +237,9 @@ table{
     &:focus{
       box-shadow: none;
     }
+  }
+  .disabled {
+    pointer-events: none; /* Prevents clicking */
+    cursor:not-allowed;
+    //opacity: 0.5; /* Makes the div appear faded */
   }

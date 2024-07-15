@@ -2,7 +2,7 @@ import React, { FC, useState, useEffect } from 'react';
 
 interface MessageBoxProps {
   message: string;
-  type?: 'success' | 'error' | 'info'; // 消息类型
+  type?: 'success' | 'error' | 'info' | 'loading'; // 消息类型
   duration?: number; // 自动隐藏时间（毫秒）
   onClose?: () => void; // 关闭消息框的回调函数
 }

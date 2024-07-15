@@ -58,6 +58,7 @@ const MTable: FC<ImTableProps> = (props) => {
     const popupRef = useRef<HTMLImageElement>(null);
     const tooltipRef1 = useRef<TooltipRefProps>(null)
     const fileListRef = useRef<HTMLUListElement>(null)
+    const popupForm = useRef<HTMLDivElement>(null)
     const tableColumnSettingsButn = useRef<HTMLButtonElement>(null)
     const [currentItem, setCurrentItem] = useState<Iobject>();
     
@@ -75,7 +76,7 @@ const MTable: FC<ImTableProps> = (props) => {
     
   const [files, setFiles] = useState<File[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [modalIsOpen, setModalIsOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [previewContent, setPreviewContent] = useState<string | null>(null);
   const [previewSrc, setPreviewSrc] = useState<string | ArrayBuffer | null>(null);
   const [previewType, setPreviewType] = useState<string | null>(null);
@@ -165,7 +166,6 @@ const MTable: FC<ImTableProps> = (props) => {
             }
             setSelectedFile(file);
         }
-        setModalIsOpen(true);
     };
     
     const handleFileDelected = async (file: File|undefined,files:File[]) => {
@@ -177,10 +177,6 @@ const MTable: FC<ImTableProps> = (props) => {
         }
     }
 
-    const _closeModal = () => {
-    setModalIsOpen(false);
-    setSelectedFile(null);
-    };
   const togglePopup = () => {
     setIsPopupOpen(!isPopupOpen);
   };
@@ -535,6 +531,10 @@ const MTable: FC<ImTableProps> = (props) => {
         
     }
     const onSubmited = async () => {
+        if(popupForm.current){
+            //popupForm.current.enable
+        }
+        setIsSaving(true)
         const updatedItem:Iobject = { ...currentItem, ['modifiedTime']: new Date().toISOString() };
         var values:string[]=[];
         var keys:string[]=[];
@@ -553,17 +553,7 @@ const MTable: FC<ImTableProps> = (props) => {
                 source_key.push(`source.${k}`)
             }
         })
-        console.log('query',`
-        MERGE INTO documents_list AS target
-        USING (VALUES (${values.join(", ")})) AS source (${keys.join(", ")})
-        ON target.docId = source.docId
-        WHEN MATCHED THEN
-            UPDATE SET ${values_keys.join(", ")}
-        WHEN NOT MATCHED THEN
-            INSERT (${values.join(", ")})
-            VALUES (${source_key.join(", ")});
-        `,updatedItem)
-        fetch("http://"+serverIp+":"+serverPort+"/saveData",{
+        const response = await fetch("http://"+serverIp+":"+serverPort+"/saveData",{
           headers:{
             'Content-Type': 'application/json'
           },
@@ -579,11 +569,13 @@ const MTable: FC<ImTableProps> = (props) => {
                 VALUES (${source_key.join(", ")});
             `})
         })
-        .then(response => response.json())
-        .then(data => {
-            console.log("saveData",data)
-            showMessage(data.data.rowsAffected.length>0?"执行完成":"执行失败")
-        })
+        //const _result = await response.json()
+        //showMessage(_result.data.rowsAffected.length>0?"执行完成":"执行失败")
+        // .then(response => response.json())
+        // .then(data => {
+        //     console.log("saveData",data)
+        //     showMessage(data.data.rowsAffected.length>0?"执行完成":"执行失败")
+        // })
         const _files:File[]=[];
         if(updatedItem['attachement']){
             const fileNames=updatedItem['attachement'].split(',')
@@ -610,10 +602,11 @@ const MTable: FC<ImTableProps> = (props) => {
             });
             console.log("formData",formData)
             try {
-                fetch(`http://${serverIp}:${serverPort}/uploadFiles`, {
+                const _response =await fetch(`http://${serverIp}:${serverPort}/uploadFiles`, {
                     method: 'POST',
                     body: formData,
-                }).then(r=>console.log("uploadFiles",r));
+                })//.then(r=>console.log("uploadFiles",r));
+                console.log("uploadFiles",_response)
             } catch (error) {
                 console.error('Error:', error);
             }
@@ -645,21 +638,24 @@ const MTable: FC<ImTableProps> = (props) => {
                 `)
             })
             console.log(queries.join(" "))
-            fetch("http://"+serverIp+":"+serverPort+"/saveData",{
+            const response = await fetch("http://"+serverIp+":"+serverPort+"/saveData",{
               headers:{
                 'Content-Type': 'application/json'
               },
               method: 'POST',
               body: JSON.stringify({ type: 'mssql',query:queries.join(" ")})
             })
-            .then(response => response.json())
-            .then(data => {
+            const _result = await response.json()
+            setTagsToAdd([])
+            console.log("saveData tags",_result)
+            // .then(response => response.json())
+            // .then(data => {
                 
-                setTagsToAdd([])
-                console.log("saveData tags",data)
+            //     setTagsToAdd([])
+            //     console.log("saveData tags",data)
                 
                 
-            })
+            // })
         }
         
         if(result!==undefined){
@@ -669,7 +665,8 @@ const MTable: FC<ImTableProps> = (props) => {
             setResult([updatedItem])
             setSearch([updatedItem])
         }
-
+        showMessage("执行完成")
+        setIsSaving(false)
         console.log(currentItem,updatedItem)
     }
     const getValuesFromLabels = (labels:string,columnData:ColumnData)=>{
@@ -859,7 +856,7 @@ const MTable: FC<ImTableProps> = (props) => {
                 </div>
             )}
             {currentItem && (
-                <div className="modal">
+                <div ref={popupForm} className={"modal "+(isSaving?"disabled":"")}>
                 <div className="modal-content">
                     <span className="close-button" onClick={closeModal}>&times;</span>
                     <div style={{textAlign:"center",fontWeight:700}}>{currentItem['docId']}</div>
@@ -867,7 +864,8 @@ const MTable: FC<ImTableProps> = (props) => {
                         {renderedItems}
                     </div>
                     <div>
-                        <Button style={{marginTop:"20px",width:100,marginRight:"10px"}} btnType="blue" hasShadow={true} onClick={onSubmited}>提交</Button>
+                        <Button style={{marginTop:"20px",width:100,marginRight:"10px"}} btnType="blue" hasShadow={true} onClick={onSubmited}>
+                            {isSaving ? <Icon icon="spinner" style={{fontSize:"24px"}} spin></Icon>:'提交'}</Button>
                         <Button style={{marginTop:"20px",width:100}} btnType="red" hasShadow={true} onClick={onDeleted}>删除</Button>
                     </div>
                 </div>

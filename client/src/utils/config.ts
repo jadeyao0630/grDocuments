@@ -2,8 +2,8 @@ import { Iobject } from "../components/MTable/MTable"
 
 const local ="192.168.10.122"
 const glory ="192.168.10.213"
-const isTest=true
-export const serverIp=glory
+const isTest=false
+export const serverIp=local
 export const serverPort=isTest?"4556":"4555"
 export const webSocketPort=isTest?"3003":"3002"
 export const remoteSotrageServer="http://192.168.10.243/uploads/"
