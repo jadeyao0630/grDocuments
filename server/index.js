@@ -674,6 +674,88 @@ app.post('/uploadImage', async (req, res) => {
         //res.status(500).send('Error processing file');
     }
 });
+app.post('/hikvision',async(request,response)=>{
+  var secret = "PQtJWT69Q2Bb5PAgTtea";
+  var timestamp = GetMilSeconds();
+  var uuid = guid2();
+  var method = request.method;
+  var appkey = "21763073";
+  const accept = request.headers["accept"] || '';
+  const contentType = request.headers["content-type"] || '';
+  var path = "/artemis/api/video/v2/cameras/previewURLs";
+  var signHeaders = "x-ca-key,x-ca-nonce,x-ca-timestamp";
+
+  //判断是否为GET
+
+
+
+  // //获取【获取登录凭证】接口传参 -- 非灵活写法
+  // var language = pm.request.url.query.get('language');
+  // var service = pm.request.url.query.get('service');
+  // var userCode = pm.request.url.query.get('userCode');
+  //判断是否为GET
+  // if(method=="GET"){
+  //     path=path+"?"+"language="+language+"&"+"service="+service+"&"+"userCode="+userCode
+  // }
+  console.log("path=",request.url);
+
+  var message = method+"\n"+accept+"\n"+contentType+"\nx-ca-key:"+appkey+"\nx-ca-nonce:"+uuid+"\nx-ca-timestamp:"+timestamp+"\n"+path;
+
+  var signStr = sign(message,secret);
+  console.log("signStr", signStr)
+  console.log("timestamp", timestamp)
+  console.log("uuid", uuid)
+  const headers = {
+    'Accept':accept,
+    'x-ca-key': appkey,
+    'x-ca-nonce': uuid,
+    'x-ca-timestamp': timestamp.toString(),
+    'x-ca-signature-headers': signHeaders,
+    'x-ca-signature': signStr,
+    'Content-Type': contentType
+  };
+  const data = {
+    "pageNo":1,
+    "pageSize":100
+  };
+  try {
+    const fetchResponse = await fetch('https://172.16.42.151/artemis/api/resource/v1/cameras', {
+      method: 'POST',
+      headers: headers,
+      body: JSON.stringify(data)
+    });
+
+    const result = await fetchResponse.json();
+    response.json(result);
+  } catch (error) {
+    console.error('Error:', error);
+    response.status(500).send('Error making the request');
+  }
+  // pm.globals.set("signHeaders", signHeaders);
+  // pm.globals.set("signStr", signStr);
+  // pm.globals.set("timestamp", timestamp);
+  // pm.globals.set("uuid", uuid);
+  // 使用全局变量
+  // console.log(pm.globals.get("signStr"));
+  // console.log(pm.globals.get("signHeaders"));
+
+});
+function GetMilSeconds()  // 获取当前时间的毫秒数
+{
+    return new Date().getTime();
+}
+
+//生成uuid
+function guid2() {
+    function S4() {
+        return (((1 + Math.random()) * 0x10000) | 0).toString(16).substring(1);
+    }
+    return (S4() + S4() + "-" + S4() + "-" + S4() + "-" + S4() + "-" + S4() + S4() + S4());
+}
+//计算签名字符串
+function sign(signString, secret) {
+  return CryptoJS.enc.Base64.stringify(CryptoJS.HmacSHA256(signString, secret));
+}
 const executeBatchQueries = async (queries, batchSize) => {
   for (let i = 0; i < queries.length; i += batchSize) {
       const batch = queries.slice(i, i + batchSize);
